@@ -1,75 +1,97 @@
-import os
-from pipes import quote
 import re
-import sqlite3
+from pipes import quote
 import struct
 import subprocess
 import time
-import webbrowser
 from playsound import playsound
 import eel
+import os
+import sqlite3
+import webbrowser
 import pyaudio
 import pyautogui
+import sys
+import os
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from engine.command import speak
 from engine.config import ASSISTANT_NAME
-# Playing assiatnt sound function
 import pywhatkit as kit
+from hugchat import hugchat
+from engine.helper import extract_yt_term,remove_words,extract_search_term
 import pvporcupine
 
-from engine.helper import extract_yt_term, remove_words
-from hugchat import hugchat
-
-con = sqlite3.connect("jarvis.db")
+con = sqlite3.connect("alexa.db")
 cursor = con.cursor()
 
+# starting assistant sound
 @eel.expose
 def playAssistantSound():
     music_dir = "www\\assets\\audio\\start_sound.mp3"
     playsound(music_dir)
 
-    
 def openCommand(query):
-    query = query.replace(ASSISTANT_NAME, "")
-    query = query.replace("open", "")
-    query.lower()
+    query = query.replace(ASSISTANT_NAME,"")
+    query = query.replace("open","")
+    query = query.strip()
+    query = query.lower()
 
-    app_name = query.strip()
+    app_name = query
 
-    if app_name != "":
+    if app_name:
 
         try:
             cursor.execute(
-                'SELECT path FROM sys_command WHERE name IN (?)', (app_name,))
+                'SELECT path FROM sys_command WHERE name = ?', (app_name,))
             results = cursor.fetchall()
+            print(f"Database sys_command result: {results}")  # Debug print
+            
+            if results:
+                speak(f"Opening {app_name}")
+                print(f"Opening path: {results[0][0]}")  # Debug print
+                os.startfile(results[0][0])  # opening application
 
-            if len(results) != 0:
-                speak("Opening "+query)
-                os.startfile(results[0][0])
-
-            elif len(results) == 0: 
+            else: 
                 cursor.execute(
-                'SELECT url FROM web_command WHERE name IN (?)', (app_name,))
+                'SELECT url FROM web_command WHERE name = ?', (app_name,))
                 results = cursor.fetchall()
+                print(f"Database web_command result: {results}")  # Debug print
                 
-                if len(results) != 0:
-                    speak("Opening "+query)
-                    webbrowser.open(results[0][0])
+                if results:
+                    speak(f"Opening {app_name}")
+                    print(f"Opening url: {results[0][0]}")  # Debug print
+                    webbrowser.open(results[0][0])  # opening website
 
                 else:
-                    speak("Opening "+query)
+                    # Try to open the app using the system command
+                    speak(f"Trying to open {app_name}")
                     try:
-                        os.system('start '+query)
-                    except:
-                        speak("not found")
-        except:
-            speak("some thing went wrong")
+                        print(f"Running system command: start {app_name}")  # Debug print
+                        os.system(f'start {app_name}')  # opening command in cmd
+                    except Exception as e:
+                        speak(f"Could not open {app_name}")
+                        print(f"Error: {e}") #Debug print
+        except Exception as e:
+            speak(f"some thing went wrong:{e}")
+            print(f"Database error: {e}")  # Show actual error
 
-       
 
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
     speak("Playing "+search_term+" on YouTube")
     kit.playonyt(search_term)
+
+
+def SearchWebsite(query):
+    #Extract search query and open the specific website"""
+    search_term, website = extract_search_term(query)
+    
+    if search_term and website:
+        speak(f"Searching {search_term} on {website}")
+        search_url = f"https://www.{website}.com/search?q={search_term}"
+        webbrowser.open(search_url)
+    else:
+        speak("Sorry, I couldn't understand the website or search term.")
+
 
 
 def hotword():
@@ -110,8 +132,6 @@ def hotword():
         if paud is not None:
             paud.terminate()
 
-
-
 # find contacts
 def findContact(query):
     
@@ -124,7 +144,6 @@ def findContact(query):
         results = cursor.fetchall()
         print(results[0][0])
         mobile_number_str = str(results[0][0])
-
         if not mobile_number_str.startswith('+91'):
             mobile_number_str = '+91' + mobile_number_str
 
@@ -132,23 +151,22 @@ def findContact(query):
     except:
         speak('not exist in contacts')
         return 0, 0
-    
-def whatsApp(mobile_no, message, flag, name):
-    
 
+   
+def whatsApp(mobile_no, message, flag, name):
     if flag == 'message':
         target_tab = 12
-        jarvis_message = "message send successfully to "+name
+        j_message = "message send successfully to "+name
 
     elif flag == 'call':
         target_tab = 7
         message = ''
-        jarvis_message = "calling to "+name
+        j_message = "calling to "+name
 
     else:
         target_tab = 6
         message = ''
-        jarvis_message = "staring video call with "+name
+        j_message = "staring video call with "+name
 
 
     # Encode the message for URL
@@ -171,7 +189,7 @@ def whatsApp(mobile_no, message, flag, name):
         pyautogui.hotkey('tab')
 
     pyautogui.hotkey('enter')
-    speak(jarvis_message)
+    speak(j_message)
 
 # chat bot 
 def chatBot(query):
@@ -185,7 +203,6 @@ def chatBot(query):
     return response
 
 # android automation
-
 def makeCall(name, mobileNo):
     mobileNo =mobileNo.replace(" ", "")
     speak("Calling "+name)
@@ -203,17 +220,17 @@ def sendMessage(message, mobileNo, name):
     time.sleep(1)
     keyEvent(3)
     # open sms app
-    tapEvents(136, 2220)
+    tapEvents(100, 1480)
     #start chat
-    tapEvents(819, 2192)
+    tapEvents(550, 1485)
     # search mobile no
     adbInput(mobileNo)
     #tap on name
-    tapEvents(601, 574)
+    tapEvents(285, 470)
     # tap on input
-    tapEvents(390, 2270)
+    tapEvents(350, 1530)
     #message
     adbInput(message)
     #send
-    tapEvents(957, 1397)
+    tapEvents(645, 1000)
     speak("message send successfully to "+name)

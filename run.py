@@ -1,7 +1,7 @@
- 
-
+# Description: This file is used to run Jarvis and hotword detection in parallel.
 import multiprocessing
 import subprocess
+import eel
 
 # To run Jarvis
 def startJarvis():
@@ -16,13 +16,18 @@ def listenHotword():
         print("Process 2 is running.")
         from engine.features import hotword
         hotword()
+        
+def start_eel():
+    eel.init("www")
+    eel.start('index.html', mode=None, host='localhost', block=False)
 
 
-    # Start both processes
+# Start both processes
 if __name__ == '__main__':
         p1 = multiprocessing.Process(target=startJarvis)
         p2 = multiprocessing.Process(target=listenHotword)
         p1.start()
+        # subprocess.call([r'device.bat'])
         p2.start()
         p1.join()
 

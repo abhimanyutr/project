@@ -21,10 +21,19 @@ def remove_words(input_string, words_to_remove):
 
     # Join the remaining words back into a string
     result_string = ' '.join(filtered_words)
-
     return result_string
 
+def extract_search_term(command):
+    #Extract the search term and website from user command"""
 
+    pattern = r'search\s+(.*?)\s+on\s+(\w+)'
+    match = re.search(pattern, command, re.IGNORECASE)
+    
+    if match:
+        search_term = match.group(1)
+        website = match.group(2).lower()  # Ensure lowercase for consistency
+        return search_term, website
+    return None, None
 
 # key events like receive call, stop call, go back
 def keyEvent(key_code):
