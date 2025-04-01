@@ -3,6 +3,7 @@ import cv2
 import face_recognition
 import pickle
 import numpy as np
+import time
 
 def AuthenticateFace(image_path=None):
     """
@@ -33,11 +34,13 @@ def AuthenticateFace(image_path=None):
     else:
         # Open webcam
         video = cv2.VideoCapture(0)
+        start_time = time.time()  # Start time for the timeout
+
         while True:
             ret, frame = video.read()
             if not ret:
                 print("❌ Failed to capture image from webcam!")
-                return False
+                break
             
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
@@ -51,7 +54,13 @@ def AuthenticateFace(image_path=None):
                 break
             
             cv2.imshow("Authentication", frame)
-            if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
+
+            # Exit after 10 seconds if no face is detected
+            if time.time() - start_time > 10:
+                print("❌ Timeout: No face detected within 10 seconds.")
+                break
+
+            if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit manually
                 break
         
         video.release()
